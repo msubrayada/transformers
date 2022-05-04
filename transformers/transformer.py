@@ -111,7 +111,7 @@ Encoder
     
 """
 class Encoder(Layer):
-    def __init__(self, n, embed_dim, max_length, num_heads, ff_dim, rate=0.1, pos_encoding=False, att_module="MHA", **kwargs):
+    def __init__(self, n, embed_dim, max_length, num_heads, ff_dim, rate=0.1, pos_encoding=False, att_module="MHA", return_all_outputs=False, **kwargs):
         super(Encoder, self).__init__(**kwargs)
         self.n = n        
         self.embed_dim = embed_dim
@@ -122,21 +122,27 @@ class Encoder(Layer):
         self._layers = [EncoderBlock(embed_dim, num_heads, ff_dim, rate=0.1, att_module=att_module) for _ in range(n)]
         self.pos_encoding = pos_encoding
         self.att_module = att_module
+        self.return_all_outputs = return_all_outputs
         self.pe = positional_encoding(self.max_length, self.embed_dim)
         
     def get_config(self):
         config = super(Encoder, self).get_config()
-        config.update({"n": self.n, "embed_dim":self.embed_dim, "max_length": self.max_length, "num_heads":self.n_h, "ff_dim":self.f_d, "pos_encoding":self.pos_encoding, "att_module":self.att_module, "rate":self.rate})
+        config.update({"n": self.n, "embed_dim":self.embed_dim, "max_length": self.max_length, "num_heads":self.n_h, "ff_dim":self.f_d, "pos_encoding":self.pos_encoding, "att_module":self.att_module, "return_all_outputs":self.return_all_outputs, "rate":self.rate})
         return config
     
     def call(self, x, training=False):
         x *= tf.math.sqrt(tf.cast(self.embed_dim, tf.float32))    
         if (self.pos_encoding == True):
             x = x + self.pe[:, :tf.shape(x)[1], :]
-        
+        output = []
         for layer in self._layers:
             x = layer(x, training)
-        return x
+            output.append(x)
+        
+        if (self.return_all_outputs == True):
+            return output
+        else:
+            return x
 
     
 """
